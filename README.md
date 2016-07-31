@@ -12,8 +12,7 @@ Write your `conf.json` file:
 		"dejacharacterstats",
 		"details",
 		"dynamiccam"
-	],
-	"noop": true
+	]
 }
 ```
 
@@ -21,9 +20,8 @@ Write your `conf.json` file:
 
 `addons` is your list of addons.
 
-`noop` will disable any addon download.
-
 ```bash
 pip3 install aiohttp
+python3 update.py --noop
 python3 update.py
 ```

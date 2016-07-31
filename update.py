@@ -1,4 +1,5 @@
 from aiohttp import ClientSession
+from argparse import ArgumentParser
 import asyncio
 import json
 import logging
@@ -10,18 +11,18 @@ import zipfile
 log = logging.getLogger(__name__)
 
 
-class Scraper:
+class Updater:
 
-    def __init__(self, config_file='conf.json'):
+    def __init__(self, noop=False, config_file='conf.json'):
         with open(config_file, 'r') as f:
             config = json.loads(f.read())
         self.addons_path = config['addons_path']
         self.addons = config['addons']
-        self.noop = config.get('noop', False)
+        self.noop = noop
         if self.noop:
             log.info('NOOP mode')
 
-    async def _search_url(self, session, addon):
+    async def _install_addon(self, session, addon):
         url = 'https://mods.curse.com/addons/wow/{}/download'.format(addon)
         async with session.get(url) as response:
             m = re.search(
@@ -46,12 +47,12 @@ class Scraper:
         log.info('%s: Extracting to %s', addon, self.addons_path)
         log.info('%s: Successfully updated to version %s', addon, download_version)
 
-    async def search(self):
+    async def run(self):
         tasks = []
         with ClientSession() as session:
             for addon in self.addons:
                 tasks.append(asyncio.ensure_future(
-                    self._search_url(session, addon)
+                    self._install_addon(session, addon)
                 ))
             await asyncio.wait(tasks)
 
@@ -61,6 +62,11 @@ if __name__ == '__main__':
         level=logging.INFO,
         format='%(asctime)-15s %(levelname)-8s %(message)s'
     )
+    parser = ArgumentParser()
+    parser.add_argument('-n', '--noop', action='store_true', help='Do not install')
+    args = parser.parse_args()
+
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(Scraper().search())
+    updater = Updater(noop=args.noop)
+    loop.run_until_complete(updater.run())
     loop.close()
