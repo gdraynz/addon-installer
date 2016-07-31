@@ -25,7 +25,7 @@ class Scraper:
         url = 'https://mods.curse.com/addons/wow/{}/download'.format(addon)
         async with session.get(url) as response:
             m = re.search(
-                r'(?P<url>http:\/\/addons\.curse\.cursecdn\.com\/files\/\d+\/\d+\/(?P<version>{}.+)\.zip)'.format(addon),
+                r'(?P<url>http:\/\/addons\.curse\.cursecdn\.com\/files\/\d+\/\d+\/(?P<version>.+)\.zip)'.format(addon),
                 await response.text(),
                 re.IGNORECASE
             )
