@@ -13,8 +13,8 @@ log = logging.getLogger(__name__)
 
 class Updater:
 
-    def __init__(self, noop=False, config_file='conf.json'):
-        with open(config_file, 'r') as f:
+    def __init__(self, conf='conf.json', noop=False):
+        with open(conf, 'r') as f:
             config = json.loads(f.read())
         self.addons_path = config['addons_path']
         self.addons = config['addons']
@@ -64,9 +64,10 @@ if __name__ == '__main__':
     )
     parser = ArgumentParser()
     parser.add_argument('-n', '--noop', action='store_true', help='Do not install')
+    parser.add_argument('-c', '--conf', default='conf.json', help='Configuration file')
     args = parser.parse_args()
 
     loop = asyncio.get_event_loop()
-    updater = Updater(noop=args.noop)
+    updater = Updater(conf=args.conf, noop=args.noop)
     loop.run_until_complete(updater.run())
     loop.close()
