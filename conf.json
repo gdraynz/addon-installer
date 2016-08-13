@@ -2,9 +2,10 @@
 	"addons_path": "/Applications/World of Warcraft/Interface/AddOns",
 	"addons": [
 		"advancedinterfaceoptions",
-		"deadly-boss-mods",
 		"dejacharacterstats",
 		"details",
-		"dynamiccam"
+		"handynotes",
+		"handynotes_legionrarestreasures",
+		"handynotes_worldmapbutton"
 	]
 }
