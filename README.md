@@ -22,6 +22,6 @@ Write your `conf.json` file:
 
 ```bash
 pip3 install aiohttp
-python3 update.py --noop
-python3 update.py
+python3 addons.py -c conf.json --noop
+python3 addons.py -c conf.json
 ```
