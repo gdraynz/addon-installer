@@ -1,11 +1,11 @@
-from aiohttp import ClientSession
-from argparse import ArgumentParser
 import asyncio
 import json
 import logging
 import re
-from tempfile import TemporaryFile
 import zipfile
+from aiohttp import ClientSession
+from argparse import ArgumentParser
+from tempfile import TemporaryFile
 
 
 log = logging.getLogger(__name__)
@@ -41,11 +41,13 @@ class Installer:
         if not self.noop:
             async with self.session.get(download_url) as response:
                 zip_data = await response.read()
-            tmp = TemporaryFile()
-            tmp.write(zip_data)
-            z = zipfile.ZipFile(tmp)
-            z.extractall(self.addons_path)
-        log.info('%s: Extracting to %s', addon, self.addons_path)
+            def unzip():
+                tmp = TemporaryFile()
+                tmp.write(zip_data)
+                z = zipfile.ZipFile(tmp)
+                z.extractall(self.addons_path)
+            log.info('%s: Extracting to %s', addon, self.addons_path)
+            await asyncio.get_event_loop().run_in_executor(None, unzip)
         log.info('%s: Successfully updated to version %s', addon, download_version)
 
     async def install(self):

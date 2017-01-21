@@ -1,10 +1,12 @@
 {
-	"addons_path": "/Applications/World of Warcraft/Interface/AddOns",
+	"addons_path": "/mnt/c/Jeux/World of Warcraft/Interface/AddOns",
 	"addons": [
 		"advancedinterfaceoptions",
 		"dejacharacterstats",
 		"details",
 		"coordinates",
-		"world-quest-tracker"
+		"world-quest-tracker",
+		"dynamiccam",
+		"257550-immersion"
 	]
 }
