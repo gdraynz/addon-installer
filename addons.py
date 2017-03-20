@@ -1,7 +1,8 @@
-import asyncio
-import json
-import logging
 import re
+import json
+import uvloop
+import asyncio
+import logging
 import zipfile
 from aiohttp import ClientSession
 from argparse import ArgumentParser
@@ -70,9 +71,8 @@ if __name__ == '__main__':
     parser.add_argument('-c', '--conf', default='conf.json', help='Configuration file')
     args = parser.parse_args()
 
+    asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())    
     loop = asyncio.get_event_loop()
     installer = Installer(conf=args.conf, noop=args.noop)
-
     loop.run_until_complete(installer.install())
-
     loop.close()

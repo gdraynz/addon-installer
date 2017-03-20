@@ -21,7 +21,7 @@ Write your `conf.json` file:
 `addons` is your list of addons.
 
 ```bash
-pip3 install aiohttp
+pip3 install -r requirements.txt
 python3 addons.py -c conf.json --noop
 python3 addons.py -c conf.json
 ```
