@@ -28,7 +28,7 @@ class Installer:
         url = 'https://mods.curse.com/addons/wow/{}/download'.format(addon)
         async with self.session.get(url) as response:
             m = re.search(
-                r'(?P<url>http:\/\/addons\.curse\.cursecdn\.com\/files\/\d+\/\d+\/(?P<version>.+)\.zip)',
+                r'(?P<url>https:\/\/addons\.curse\.cursecdn\.com\/files\/\d+\/\d+\/(?P<version>.+)\.zip)',
                 await response.text(),
                 re.IGNORECASE
             )
