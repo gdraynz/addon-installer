@@ -12,7 +12,7 @@ from tempfile import TemporaryFile
 log = logging.getLogger(__name__)
 
 
-class ParallelStreamWriter(object):
+class ParallelStreamWriter:
 
     """
     Write out messages for operations happening in parallel.
@@ -52,10 +52,9 @@ class Installer:
         self.addons = config['addons']
         self.noop = noop
         self.session = None
-        #
         self.pwriter = ParallelStreamWriter('Installing')
         # Avoid overloading curse from requests
-        self.semaphore = asyncio.Semaphore(3)
+        self.semaphore = asyncio.Semaphore(5)
         if self.noop:
             log.debug('NOOP mode')
 
@@ -85,15 +84,13 @@ class Installer:
                 async with self.session.get(download_url) as response:
                     zip_data = await response.read()
 
-            def unzip():
-                tmp = TemporaryFile()
-                tmp.write(zip_data)
-                z = zipfile.ZipFile(tmp)
-                z.extractall(self.addons_path)
-
             log.debug('%s: Extracting to %s', addon, self.addons_path)
             self.pwriter.write(addon, 'extracting')
-            await asyncio.get_event_loop().run_in_executor(None, unzip)
+
+            tmp = TemporaryFile()
+            tmp.write(zip_data)
+            z = zipfile.ZipFile(tmp)
+            z.extractall(self.addons_path)
 
         log.debug('%s: Successfully updated to version %s', addon, download_version)
         self.pwriter.write(addon, 'done')
