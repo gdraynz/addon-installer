@@ -3,6 +3,10 @@
 
 ## Use
 
+Select your addons by taking the name in Curse's URLs:
+From `https://mods.curse.com/addons/wow/advancedinterfaceoptions`
+Take `advancedinterfaceoptions`
+
 Write your `conf.json` file:
 ```json
 {

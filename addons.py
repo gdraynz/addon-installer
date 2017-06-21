@@ -4,9 +4,9 @@ import json
 import asyncio
 import logging
 import zipfile
+from io import BytesIO
 from aiohttp import ClientSession
 from argparse import ArgumentParser
-from tempfile import TemporaryFile
 
 
 log = logging.getLogger(__name__)
@@ -60,6 +60,7 @@ class Installer:
 
     async def _install_addon(self, addon):
         self.pwriter.initialize(addon)
+        self.pwriter.write(addon, 'searching')
         url = 'https://mods.curse.com/addons/wow/{}/download'.format(addon)
         async with self.semaphore:
             async with self.session.get(url) as response:
@@ -87,13 +88,11 @@ class Installer:
             log.debug('%s: Extracting to %s', addon, self.addons_path)
             self.pwriter.write(addon, 'extracting')
 
-            tmp = TemporaryFile()
-            tmp.write(zip_data)
-            z = zipfile.ZipFile(tmp)
+            z = zipfile.ZipFile(BytesIO(zip_data))
             z.extractall(self.addons_path)
 
         log.debug('%s: Successfully updated to version %s', addon, download_version)
-        self.pwriter.write(addon, 'done')
+        self.pwriter.write(addon, 'done: {}'.format(download_version))
 
     async def install(self):
         tasks = []
