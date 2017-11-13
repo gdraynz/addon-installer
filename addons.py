@@ -45,6 +45,8 @@ class ParallelStreamWriter:
 
 class Installer:
 
+    CURSE_URL = 'https://www.curseforge.com'
+
     def __init__(self, conf='conf.json', noop=False):
         with open(conf, 'r') as f:
             config = json.loads(f.read())
@@ -53,37 +55,32 @@ class Installer:
         self.noop = noop
         self.session = None
         self.pwriter = ParallelStreamWriter('Installing')
-        # Avoid overloading curse from requests
-        self.semaphore = asyncio.Semaphore(5)
         if self.noop:
             log.debug('NOOP mode')
 
     async def _install_addon(self, addon):
         self.pwriter.initialize(addon)
         self.pwriter.write(addon, 'searching')
-        url = 'https://mods.curse.com/addons/wow/{}/download'.format(addon)
-        async with self.semaphore:
-            async with self.session.get(url) as response:
-                m = re.search(
-                    r'(?P<url>https:\/\/addons\.curse\.cursecdn\.com\/files\/\d+\/\d+\/(?P<version>.+)\.zip)',
-                    await response.text(),
-                    re.IGNORECASE
-                )
+        url = f'{self.CURSE_URL}/wow/addons/{addon}/download'
+        async with self.session.get(url) as response:
+            m = re.search(
+                f'href=\"(?P<url>\/wow\/addons\/{addon}\/download\/\d+\/file)\"',
+                await response.text(),
+                re.IGNORECASE
+            )
 
         if not m:
-            log.debug('%s: Addon not found' % addon)
+            log.debug('%s: Addon not found', addon)
             self.pwriter.write(addon, 'not found')
             return
 
-        download_url = m.group('url')
-        download_version = m.group('version')
+        download_url = f"{self.CURSE_URL}{m.group('url')}"
         log.debug('%s: Downloading from %s', addon, download_url)
         self.pwriter.write(addon, 'downloading')
 
         if not self.noop:
-            async with self.semaphore:
-                async with self.session.get(download_url) as response:
-                    zip_data = await response.read()
+            async with self.session.get(download_url) as response:
+                zip_data = await response.read()
 
             log.debug('%s: Extracting to %s', addon, self.addons_path)
             self.pwriter.write(addon, 'extracting')
@@ -91,8 +88,8 @@ class Installer:
             z = zipfile.ZipFile(BytesIO(zip_data))
             z.extractall(self.addons_path)
 
-        log.debug('%s: Successfully updated to version %s', addon, download_version)
-        self.pwriter.write(addon, 'done: {}'.format(download_version))
+        log.debug('%s: Successfully updated.', addon)
+        self.pwriter.write(addon, 'done')
 
     async def install(self):
         tasks = []

@@ -4,9 +4,11 @@
 		"advancedinterfaceoptions",
 		"dejacharacterstats",
 		"details",
+		"details-advanced-death-logs-plug",
 		"coordinates",
 		"world-quest-tracker",
-		"257550-immersion",
-		"simpleobjectiveprogress"
+		"immersion",
+		"simpleobjectiveprogress",
+		"btw-quests"
 	]
 }
