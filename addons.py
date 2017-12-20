@@ -5,8 +5,9 @@ import asyncio
 import logging
 import zipfile
 from io import BytesIO
-from aiohttp import ClientSession
 from argparse import ArgumentParser
+
+from aiohttp import ClientSession
 
 
 log = logging.getLogger(__name__)
@@ -45,7 +46,7 @@ class ParallelStreamWriter:
 
 class Installer:
 
-    CURSE_URL = 'https://www.curseforge.com'
+    CURSE_URL = 'https://wow.curseforge.com/projects'
 
     def __init__(self, conf='conf.json', noop=False):
         with open(conf, 'r') as f:
@@ -55,40 +56,24 @@ class Installer:
         self.noop = noop
         self.session = None
         self.pwriter = ParallelStreamWriter('Installing')
-        if self.noop:
-            log.debug('NOOP mode')
+        print(f'From {self.CURSE_URL}')
 
     async def _install_addon(self, addon):
         self.pwriter.initialize(addon)
-        self.pwriter.write(addon, 'searching')
-        url = f'{self.CURSE_URL}/wow/addons/{addon}/download'
-        async with self.session.get(url) as response:
-            m = re.search(
-                f'href=\"(?P<url>\/wow\/addons\/{addon}\/download\/\d+\/file)\"',
-                await response.text(),
-                re.IGNORECASE
-            )
-
-        if not m:
-            log.debug('%s: Addon not found', addon)
-            self.pwriter.write(addon, 'not found')
-            return
-
-        download_url = f"{self.CURSE_URL}{m.group('url')}"
-        log.debug('%s: Downloading from %s', addon, download_url)
+        url = f'{self.CURSE_URL}/{addon}/files/latest'
         self.pwriter.write(addon, 'downloading')
 
+        async with self.session.get(url) as response:
+            if response.status != 200:
+                self.pwriter.write(addon, 'not found')
+                return
+            zip_data = await response.read()
+
         if not self.noop:
-            async with self.session.get(download_url) as response:
-                zip_data = await response.read()
-
-            log.debug('%s: Extracting to %s', addon, self.addons_path)
             self.pwriter.write(addon, 'extracting')
-
             z = zipfile.ZipFile(BytesIO(zip_data))
             z.extractall(self.addons_path)
 
-        log.debug('%s: Successfully updated.', addon)
         self.pwriter.write(addon, 'done')
 
     async def install(self):
@@ -102,10 +87,6 @@ class Installer:
 
 
 if __name__ == '__main__':
-    # logging.basicConfig(
-    #     level=logging.INFO,
-    #     format='%(asctime)-15s %(levelname)-8s %(message)s'
-    # )
     parser = ArgumentParser()
     parser.add_argument('-n', '--noop', action='store_true', help='Do not install')
     parser.add_argument('-c', '--conf', default='conf.json', help='Configuration file')
