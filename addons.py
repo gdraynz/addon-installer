@@ -79,11 +79,10 @@ class Installer:
     async def install(self):
         tasks = []
         with ClientSession() as self.session:
-            for addon in self.addons:
-                tasks.append(asyncio.ensure_future(
-                    self._install_addon(addon)
-                ))
-            await asyncio.wait(tasks)
+            await asyncio.gather(*[
+                self._install_addon(addon)
+                for addon in self.addons
+            ])
 
 
 if __name__ == '__main__':

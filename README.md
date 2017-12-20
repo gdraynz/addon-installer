@@ -1,5 +1,6 @@
 # WoW addon updater
-(for you mac users out there)
+
+For macOS, linux and linux-on-windows (not tested on macOS).
 
 ## Use
 
@@ -14,7 +15,6 @@ Write your `conf.json` file:
 {
 	"addons_path": "/Applications/World of Warcraft/Interface/AddOns",
 	"addons": [
-		"advancedinterfaceoptions",
 		"dejacharacterstats",
 		"details",
 		"dynamiccam"
