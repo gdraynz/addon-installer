@@ -22,10 +22,6 @@ Write your `conf.json` file:
 }
 ```
 
-`addons_path` is your WoW addons folder path.
-
-`addons` is your list of addons.
-
 ```bash
 pip3 install -r requirements.txt
 python3 addons.py -c conf.json --noop

@@ -1,16 +1,13 @@
+import asyncio
+import json
 import re
 import sys
-import json
-import asyncio
-import logging
 import zipfile
-from io import BytesIO
 from argparse import ArgumentParser
+from io import BytesIO
+from pathlib import Path
 
 from aiohttp import ClientSession
-
-
-log = logging.getLogger(__name__)
 
 
 class ParallelStreamWriter:
@@ -46,22 +43,37 @@ class ParallelStreamWriter:
 
 class Installer:
 
-    CURSE_URL = 'https://wow.curseforge.com/projects'
+    CURSE_URL = 'https://wow.curseforge.com'
+    ALT_CURSE_URL = 'https://www.curseforge.com'
+    ALT_REGEX = re.compile(r'class="download__link" href="(?P<path>.+)"')
 
     def __init__(self, conf='conf.json', noop=False):
         with open(conf, 'r') as f:
             config = json.loads(f.read())
-        self.addons_path = config['addons_path']
+        self.addons_path = Path(config['addons_path'])
         self.addons = config['addons']
         self.noop = noop
         self.session = None
         self.pwriter = ParallelStreamWriter('Installing')
-        print(f'From {self.CURSE_URL}')
 
-    async def _install_addon(self, addon):
-        self.pwriter.initialize(addon)
-        url = f'{self.CURSE_URL}/{addon}/files/latest'
-        self.pwriter.write(addon, 'downloading')
+    async def _alt_install_addon(self, addon):
+        """
+        Retry on standard Curse website.
+        """
+        url = f'{self.ALT_CURSE_URL}/wow/addons/{addon}/download'
+        self.pwriter.write(addon, 'trying alternative site')
+
+        async with self.session.get(url) as response:
+            if response.status != 200:
+                self.pwriter.write(addon, 'not found')
+                return
+            match = self.ALT_REGEX.search(await response.text())
+
+        if not match:
+            self.pwriter.write(addon, 'regex error (!)')
+            return
+
+        url = f"{self.ALT_CURSE_URL}{match.group('path')}"
 
         async with self.session.get(url) as response:
             if response.status != 200:
@@ -76,9 +88,30 @@ class Installer:
 
         self.pwriter.write(addon, 'done')
 
+    async def _install_addon(self, addon):
+        """
+        Install from new Curse project website.
+        """
+        self.pwriter.initialize(addon)
+        url = f'{self.CURSE_URL}/projects/{addon}/files/latest'
+        self.pwriter.write(addon, 'downloading')
+
+        async with self.session.get(url) as response:
+            if response.status != 200:
+                await self._alt_install_addon(addon)
+                return
+            zip_data = await response.read()
+
+        if not self.noop:
+            self.pwriter.write(addon, 'extracting')
+            z = zipfile.ZipFile(BytesIO(zip_data))
+            z.extractall(self.addons_path)
+
+        self.pwriter.write(addon, 'done')
+
     async def install(self):
         tasks = []
-        with ClientSession() as self.session:
+        async with ClientSession() as self.session:
             await asyncio.gather(*[
                 self._install_addon(addon)
                 for addon in self.addons
