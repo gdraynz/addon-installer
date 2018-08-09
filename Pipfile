@@ -6,9 +6,8 @@ name = "pypi"
 [packages]
 aiohttp = "*"
 halo = "*"
-enum34 = {version="*", markers="python_version < '3.4'"}
 
 [dev-packages]
 
 [requires]
-python_version = "3.6"
+python_version = "3.7"
