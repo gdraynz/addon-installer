@@ -11,6 +11,7 @@ from pathlib import Path
 from aiohttp import ClientSession
 from halo import Halo
 
+
 async def install_peggle():
     url = 'https://github.com/adamz01h/wow_peggle/archive/master.zip'
     async with ClientSession() as session:
@@ -42,6 +43,7 @@ class Installer:
         self.loader = None
         self._done = []
         self._failed = []
+
     def done(self, addon, error=None):
         if error is not None:
             self._failed.append((addon, error))
@@ -134,6 +136,7 @@ if __name__ == '__main__':
     parser.add_argument('-c', '--conf', default='conf.json', help='Configuration file')
     parser.add_argument('--peggle', action='store_true', help='Install Peggle')
     args = parser.parse_args()
+
     installer = Installer(conf=args.conf, peggle=args.peggle)
     loop = asyncio.get_event_loop()
     loop.run_until_complete(installer.install())
