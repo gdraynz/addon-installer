@@ -1,5 +1,6 @@
 import asyncio
 import json
+import os
 import re
 import sys
 import zipfile
@@ -11,22 +12,35 @@ from aiohttp import ClientSession
 from halo import Halo
 
 
+async def install_peggle():
+    url = 'https://github.com/adamz01h/wow_peggle/archive/master.zip'
+    async with ClientSession() as session:
+        async with session.get(url) as response:
+            if response.status != 200:
+                print('Error fetching Peggle')
+                return
+            zip_data = await response.read()
+
+    z = zipfile.ZipFile(BytesIO(zip_data))
+    z.extractall(self.addons_path)
+
+
 class Installer:
 
     CURSE_URL = 'https://wow.curseforge.com'
     ALT_CURSE_URL = 'https://www.curseforge.com'
     ALT_REGEX = re.compile(r'class="download__link" href="(?P<path>.+)"')
 
-    def __init__(self, conf='conf.json', noop=False):
+    def __init__(self, conf='conf.json', peggle=False):
         with open(conf, 'r') as f:
             config = json.loads(f.read())
         self.addons_path = Path(config['addons_path'])
         self.addons = config['addons']
-        self.noop = noop
+        self.peggle = peggle
         self.session = None
 
         # Runtime
-        self.loader = Halo(f'Installing addons... (0/{len(self.addons)})')
+        self.loader = None
         self._done = []
         self._failed = []
 
@@ -60,10 +74,8 @@ class Installer:
                 return
             zip_data = await response.read()
 
-        if not self.noop:
-            z = zipfile.ZipFile(BytesIO(zip_data))
-            z.extractall(self.addons_path)
-
+        z = zipfile.ZipFile(BytesIO(zip_data))
+        z.extractall(self.addons_path)
         self.done(addon)
 
     async def _install_addon(self, addon):
@@ -77,18 +89,40 @@ class Installer:
                 return
             zip_data = await response.read()
 
-        if not self.noop:
-            z = zipfile.ZipFile(BytesIO(zip_data))
-            z.extractall(self.addons_path)
-
+        z = zipfile.ZipFile(BytesIO(zip_data))
+        z.extractall(self.addons_path)
         self.done(addon)
 
+    async def _install_peggle(self):
+        """
+        Custom installation of the addon 'Peggle'.
+        See https://github.com/adamz01h/wow_peggle
+        """
+        url = 'https://github.com/adamz01h/wow_peggle/archive/master.zip'
+        async with self.session.get(url) as response:
+            if response.status != 200:
+                self.done('Peggle', 'error')
+                return
+            zip_data = await response.read()
+
+        z = zipfile.ZipFile(BytesIO(zip_data))
+        z.extractall('/tmp/peggle')
+        os.rename(
+            '/tmp/peggle/wow_peggle-master/Peggle',
+            os.path.join(self.addons_path, 'Peggle')
+        )
+
     async def install(self):
+        tasks = [self._install_addon(addon) for addon in self.addons]
+        if self.peggle is True:
+            tasks.append(self._install_peggle())
+
+        self.loader = Halo(f'Installing addons... (0/{len(tasks)})')
         self.loader.start()
+
         async with ClientSession() as self.session:
-            await asyncio.gather(*[
-                self._install_addon(addon) for addon in self.addons
-            ])
+            await asyncio.gather(*tasks)
+
         self.loader.stop()
 
         for addon, error in self._failed:
@@ -99,11 +133,9 @@ class Installer:
 
 if __name__ == '__main__':
     parser = ArgumentParser()
-    parser.add_argument('-n', '--noop', action='store_true', help='Do not install')
     parser.add_argument('-c', '--conf', default='conf.json', help='Configuration file')
+    parser.add_argument('--peggle', action='store_true', help='Install Peggle')
     args = parser.parse_args()
 
-    loop = asyncio.get_event_loop()
-    installer = Installer(conf=args.conf, noop=args.noop)
-    loop.run_until_complete(installer.install())
-    loop.close()
+    installer = Installer(conf=args.conf, peggle=args.peggle)
+    asyncio.run(installer.install())
