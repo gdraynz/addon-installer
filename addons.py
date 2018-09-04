@@ -2,6 +2,7 @@ import asyncio
 import json
 import os
 import re
+import shutil
 import sys
 import zipfile
 from argparse import ArgumentParser
@@ -10,19 +11,6 @@ from pathlib import Path
 
 from aiohttp import ClientSession
 from halo import Halo
-
-
-async def install_peggle():
-    url = 'https://github.com/adamz01h/wow_peggle/archive/master.zip'
-    async with ClientSession() as session:
-        async with session.get(url) as response:
-            if response.status != 200:
-                print('Error fetching Peggle')
-                return
-            zip_data = await response.read()
-
-    z = zipfile.ZipFile(BytesIO(zip_data))
-    z.extractall(self.addons_path)
 
 
 class Installer:
@@ -107,7 +95,7 @@ class Installer:
 
         z = zipfile.ZipFile(BytesIO(zip_data))
         z.extractall('/tmp/peggle')
-        os.rename(
+        shutil.move()
             '/tmp/peggle/wow_peggle-master/Peggle',
             os.path.join(self.addons_path, 'Peggle')
         )
@@ -116,6 +104,7 @@ class Installer:
         tasks = [self._install_addon(addon) for addon in self.addons]
         if self.peggle is True:
             tasks.append(self._install_peggle())
+            self.addons.append('Peggle')
 
         self.loader = Halo(f'Installing addons... (0/{len(tasks)})')
         self.loader.start()
