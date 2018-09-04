@@ -22,8 +22,19 @@ Write your `conf.json` file:
 }
 ```
 
+### Using pip
+
 ```bash
 pip3 install -r requirements.txt
-python3 addons.py -c conf.json --noop
+python3 addons.py -h
 python3 addons.py -c conf.json
+```
+
+### Using pipenv
+
+```bash
+pipenv install
+pipenv shell
+python addons.py -h
+python addons.py -c conf.json
 ```

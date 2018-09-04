@@ -95,7 +95,7 @@ class Installer:
 
         z = zipfile.ZipFile(BytesIO(zip_data))
         z.extractall('/tmp/peggle')
-        shutil.move()
+        shutil.move(
             '/tmp/peggle/wow_peggle-master/Peggle',
             os.path.join(self.addons_path, 'Peggle')
         )
@@ -123,7 +123,7 @@ class Installer:
 if __name__ == '__main__':
     parser = ArgumentParser()
     parser.add_argument('-c', '--conf', default='conf.json', help='Configuration file')
-    parser.add_argument('--peggle', action='store_true', help='Install Peggle')
+    parser.add_argument('--peggle', action='store_true', help='Install Peggle (from https://github.com/adamz01h/wow_peggle)')
     args = parser.parse_args()
 
     installer = Installer(conf=args.conf, peggle=args.peggle)
