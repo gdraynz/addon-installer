@@ -89,16 +89,18 @@ class Installer:
         url = 'https://github.com/adamz01h/wow_peggle/archive/master.zip'
         async with self.session.get(url) as response:
             if response.status != 200:
-                self.done('Peggle', 'error')
+                self.done('Peggle', 'could not retrieve archive from github')
                 return
             zip_data = await response.read()
 
+        tmp_path = Path('/tmp/peggle')
         z = zipfile.ZipFile(BytesIO(zip_data))
-        z.extractall('/tmp/peggle')
+        z.extractall(tmp_path)
         shutil.move(
-            '/tmp/peggle/wow_peggle-master/Peggle',
-            os.path.join(self.addons_path, 'Peggle')
+            tmp_path / 'wow_peggle-master/Peggle',
+            self.addons_path / 'Peggle',
         )
+        self.done('Peggle')
 
     async def install(self):
         tasks = [self._install_addon(addon) for addon in self.addons]
