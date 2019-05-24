@@ -15,15 +15,18 @@ from halo import Halo
 
 class Installer:
 
+    DEFAULT_CONFIG = 'conf.json'
     CURSE_URL = 'https://wow.curseforge.com'
     ALT_CURSE_URL = 'https://www.curseforge.com'
     ALT_REGEX = re.compile(r'class="download__link" href="(?P<path>.+)"')
 
-    def __init__(self, conf='conf.json', peggle=False):
+    def __init__(self, conf=None, reset=False, peggle=False):
+        conf = Path(conf or DEFAULT_CONFIG)
         with open(conf, 'r') as f:
             config = json.loads(f.read())
         self.addons_path = Path(config['addons_path'])
         self.addons = config['addons']
+        self.reset = reset
         self.peggle = peggle
         self.session = None
 
@@ -103,13 +106,21 @@ class Installer:
         self.done('Peggle')
 
     async def install(self):
+        self.loader = Halo()
+        self.loader.start()
+
+        if self.reset is True:
+            self.loader.text = 'Removing old addons'
+            for d in self.addons_path.iterdir():
+                if not d.name.startswith('Blizzard_'):
+                    shutil.rmtree(d)
+
         tasks = [self._install_addon(addon) for addon in self.addons]
         if self.peggle is True:
             tasks.append(self._install_peggle())
             self.addons.append('Peggle')
 
-        self.loader = Halo(f'Installing addons... (0/{len(tasks)})')
-        self.loader.start()
+        self.loader.text = f'Installing addons... (0/{len(tasks)})'
 
         async with ClientSession() as self.session:
             await asyncio.gather(*tasks)
@@ -124,11 +135,20 @@ class Installer:
 
 if __name__ == '__main__':
     parser = ArgumentParser()
-    parser.add_argument('-c', '--conf', default='conf.json', help='Configuration file')
-    parser.add_argument('--peggle', action='store_true', help='Install Peggle (from https://github.com/adamz01h/wow_peggle)')
+    parser.add_argument(
+        '-c', '--conf', default='conf.json', help='Configuration file'
+    )
+    parser.add_argument(
+        '-r', '--reset', action='store_true', help='Remove all other addons'
+    )
+    parser.add_argument(
+        '--peggle',
+        action='store_true',
+        help='Install Peggle (from https://github.com/adamz01h/wow_peggle)',
+    )
     args = parser.parse_args()
 
-    installer = Installer(conf=args.conf, peggle=args.peggle)
+    installer = Installer(conf=args.conf, reset=args.reset, peggle=args.peggle)
     loop = asyncio.get_event_loop()
     loop.run_until_complete(installer.install())
-    loop.close ()
+    loop.close()
