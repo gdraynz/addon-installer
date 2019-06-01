@@ -1,9 +1,7 @@
 import asyncio
 import json
-import os
 import re
 import shutil
-import sys
 import zipfile
 from argparse import ArgumentParser
 from io import BytesIO
@@ -13,20 +11,82 @@ from aiohttp import ClientSession
 from halo import Halo
 
 
+RE_CURSEFORGE = re.compile(r'^https://wow\.curseforge\.com/projects/(?P<addon>\w+)/?.*')
+RE_CURSEFORGE_ALT = re.compile(r'^https://www\.curseforge\.com/wow/addons/(?P<addon>\w+)/?.*')
+RE_CURSEFORGE_ALT_2 = re.compile(r'class="download__link" href="(?P<path>.+)"')
+RE_GITHUB = re.compile(r'^https://github.com/(?P<repository>\w+/\w+)/?.*')
+
+
+async def dl_curseforge(client, url):
+    m = re.match(RE_CURSEFORGE, url)
+    if not m:
+        raise Exception('Wrong curse address')
+    addon = m.group('addon')
+    url = f'https://wow.curseforge.com/projects/{addon}/files/latest'
+    async with client.get(url) as response:
+        if response.status != 200:
+            raise Exception('GET ZIP failed')
+        zip_data = await response.read()
+    return zipfile.ZipFile(BytesIO(zip_data))
+
+
+async def dl_curseforce_alt(client, url):
+    m = re.match(RE_CURSEFORGE_ALT, url)
+    if not m:
+        raise Exception('Wrong curse address')
+    addon = m.group('addon')
+    url = f'https://www.curseforge.com/wow/addons/{addon}/download'
+    async with client.get(url) as response:
+        if response.status != 200:
+            raise Exception('GET ZIP URL failed')
+        match = RE_CURSEFORGE_ALT_2.search(await response.text())
+    if not match:
+        raise Exception('Regex error')
+
+    url = f"https://www.curseforge.com{match.group('path')}"
+    async with client.get(url) as response:
+        if response.status != 200:
+            raise Exception('GET ZIP failed')
+        zip_data = await response.read()
+    return zipfile.ZipFile(BytesIO(zip_data))
+
+
+async def dl_wowinterface(url):
+    pass
+
+
+async def dl_github(client, url):
+    m = re.match(RE_GITHUB, url)
+    if not m:
+        raise Exception('Failed')
+    repository = m.group('repository')
+    url = f'https://github.com/{repository}/archive/master.zip'
+    async with client.get(url) as response:
+        if response.status != 200:
+            raise Exception('GET ZIP failed')
+        zip_data = await response.read()
+    print('GITHUB! : %s' % len(zip_data))
+    return zipfile.ZipFile(BytesIO(zip_data))
+
+
 class Installer:
 
-    DEFAULT_CONFIG = 'conf.json'
+    SOURCES = {
+        'wow.curseforge.com': dl_curseforge,
+        'www.curseforge.com': dl_curseforce_alt,
+        'wowinterface.com': dl_wowinterface,
+        'github.com': dl_github,
+    }
+
     CURSE_URL = 'https://wow.curseforge.com'
     ALT_CURSE_URL = 'https://www.curseforge.com'
     ALT_REGEX = re.compile(r'class="download__link" href="(?P<path>.+)"')
 
-    def __init__(self, conf=None, reset=False, peggle=False):
-        conf = Path(conf or DEFAULT_CONFIG)
+    def __init__(self, conf='conf.json', peggle=False):
         with open(conf, 'r') as f:
             config = json.loads(f.read())
         self.addons_path = Path(config['addons_path'])
         self.addons = config['addons']
-        self.reset = reset
         self.peggle = peggle
         self.session = None
 
@@ -106,49 +166,34 @@ class Installer:
         self.done('Peggle')
 
     async def install(self):
-        self.loader = Halo()
-        self.loader.start()
+        tasks = []
+        async with ClientSession() as client:
+            for addon in self.addons:
+                for s, method in self.SOURCES.items():
+                    if s in addon:
+                        tasks.append(method(client, addon))
 
-        if self.reset is True:
-            self.loader.text = 'Removing old addons'
-            for d in self.addons_path.iterdir():
-                if not d.name.startswith('Blizzard_'):
-                    shutil.rmtree(d)
+            self.loader = Halo(f'Installing addons... (0/{len(tasks)})')
+            self.loader.start()
 
-        tasks = [self._install_addon(addon) for addon in self.addons]
-        if self.peggle is True:
-            tasks.append(self._install_peggle())
-            self.addons.append('Peggle')
+            results = await asyncio.gather(*tasks, return_exceptions=True)
 
-        self.loader.text = f'Installing addons... (0/{len(tasks)})'
+            self.loader.stop()
 
-        async with ClientSession() as self.session:
-            await asyncio.gather(*tasks)
-
-        self.loader.stop()
-
-        for addon, error in self._failed:
-            print(f"Failed to install: '{addon}' ({error})")
-        for addon in self._done:
-            print(f"Successfully installed: '{addon}'")
+            for r in results:
+                if isinstance(r, Exception):
+                    print('One failure')
+                    continue
+                r.extractall(self.addons_path)
 
 
 if __name__ == '__main__':
     parser = ArgumentParser()
-    parser.add_argument(
-        '-c', '--conf', default='conf.json', help='Configuration file'
-    )
-    parser.add_argument(
-        '-r', '--reset', action='store_true', help='Remove all other addons'
-    )
-    parser.add_argument(
-        '--peggle',
-        action='store_true',
-        help='Install Peggle (from https://github.com/adamz01h/wow_peggle)',
-    )
+    parser.add_argument('-c', '--conf', default='conf.json', help='Configuration file')
+    parser.add_argument('--peggle', action='store_true', help='Install Peggle (from https://github.com/adamz01h/wow_peggle)')
     args = parser.parse_args()
 
-    installer = Installer(conf=args.conf, reset=args.reset, peggle=args.peggle)
+    installer = Installer(conf=args.conf, peggle=args.peggle)
     loop = asyncio.get_event_loop()
     loop.run_until_complete(installer.install())
     loop.close()

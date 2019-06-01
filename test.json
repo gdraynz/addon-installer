@@ -1,0 +1,8 @@
+{
+	"addons_path": "addons",
+	"addons": [
+		"https://www.curseforge.com/wow/addons/gladius",
+		"https://wow.curseforge.com/projects/data-tools",
+		"https://github.com/adamz01h/wow_peggle"
+	]
+}
