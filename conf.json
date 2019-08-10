@@ -1,13 +1,6 @@
 {
 	"addons_path": "/tmp/addons",
 	"addons": [
-		"advancedinterfaceoptions",
-		"dejacharacterstats",
-		"details",
-		"details-advanced-death-logs-plug",
-		"coordinates",
-		"world-quest-tracker",
-		"immersion",
-		"btw-quests"
+		"https://github.com/project-classic/ClassicCodex"
 	]
 }

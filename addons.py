@@ -14,7 +14,7 @@ from halo import Halo
 RE_CURSEFORGE = re.compile(r'^https://wow\.curseforge\.com/projects/(?P<addon>\w+)/?.*')
 RE_CURSEFORGE_ALT = re.compile(r'^https://www\.curseforge\.com/wow/addons/(?P<addon>\w+)/?.*')
 RE_CURSEFORGE_ALT_2 = re.compile(r'class="download__link" href="(?P<path>.+)"')
-RE_GITHUB = re.compile(r'^https://github.com/(?P<repository>\w+/\w+)/?.*')
+RE_GITHUB = re.compile(r'^https:\/\/github.com\/(?P<repository>[\w-]+\/[\w-]+)\/?.*')
 
 
 async def dl_curseforge(client, url):
@@ -65,8 +65,6 @@ async def dl_github(client, url):
         if response.status != 200:
             raise Exception('GET ZIP failed')
         zip_data = await response.read()
-    print('GITHUB! : %s' % len(zip_data))
-    return zipfile.ZipFile(BytesIO(zip_data))
 
 
 class Installer:
@@ -182,7 +180,7 @@ class Installer:
 
             for r in results:
                 if isinstance(r, Exception):
-                    print('One failure')
+                    print(r)
                     continue
                 r.extractall(self.addons_path)
 
