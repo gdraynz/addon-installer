@@ -1,3 +1,5 @@
+:warning: New project here: https://github.com/gdraynz/wowui
+
 # WoW addon updater
 
 For macOS, linux and linux-on-windows (not tested on macOS).
